@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de jogos · Lotofácil e Mega-Sena</title>
+<style>
+  :root {
+    --roxo: #4B0F5C;
+    --roxo-escuro: #32073F;
+    --roxo-claro: #7A2C8E;
+    --creme: #FBF7F0;
+    --acento: #C79A3E;
+    --texto: #2A1030;
+  }
+
+  body.tema-megasena {
+    --roxo: #0F4A2A;
+    --roxo-escuro: #082D19;
+    --roxo-claro: #1D7A44;
+    --acento: #4CB863;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 30% 0%, var(--roxo-claro), var(--roxo) 55%, var(--roxo-escuro) 100%);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: var(--creme);
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 64px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  header {
+    text-align: left;
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 7vw, 38px);
+    font-weight: 400;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    letter-spacing: 0.2px;
+  }
+
+  header p {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    color: #D9C4E0;
+    margin: 0;
+    max-width: 34ch;
+  }
+
+  .loterias {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .loteria-botao {
+    flex: 1;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: var(--creme);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .loteria-botao.ativo {
+    background: var(--acento);
+    color: var(--roxo-escuro);
+    border-color: var(--acento);
+  }
+
+  .painel {
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .campo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+  }
+
+  .campo + .campo {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .stepper button {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: transparent;
+    color: var(--creme);
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .stepper button:active { background: rgba(255, 255, 255, 0.15); }
+
+  .stepper span {
+    min-width: 22px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .botoes {
+    display: flex;
+    gap: 10px;
+  }
+
+  #gerar {
+    flex: 1;
+    padding: 15px;
+    background: var(--acento);
+    color: var(--roxo-escuro);
+    border: none;
+    border-radius: 6px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: transform 0.08s ease;
+  }
+
+  #gerar:active { transform: scale(0.98); }
+
+  #limpar {
+    padding: 15px 18px;
+    background: transparent;
+    color: var(--creme);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+
+  #limpar:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.1); }
+
+  #resultados {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .jogo {
+    background: rgba(255, 255, 255, 0.06);
+    border-left: 3px solid var(--acento);
+    border-radius: 2px;
+    padding: 14px 16px;
+    animation: surgir 0.25s ease-out;
+  }
+
+  @keyframes surgir {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .jogo-rotulo {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    color: #C9AED4;
+    margin-bottom: 8px;
+  }
+
+  .bolas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .bola {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--creme);
+    color: var(--roxo-escuro);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .globo-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .globo {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    border: 3px solid var(--acento);
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--roxo-claro), var(--roxo-escuro));
+    box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.45);
+  }
+
+  .globo-textura {
+    position: absolute;
+    inset: -25%;
+    background-image:
+      repeating-radial-gradient(circle at 22% 25%, rgba(255,255,255,0.16) 0 4px, transparent 5px 24px),
+      repeating-radial-gradient(circle at 68% 62%, rgba(255,255,255,0.12) 0 4px, transparent 5px 28px),
+      repeating-radial-gradient(circle at 45% 80%, rgba(255,255,255,0.1) 0 3px, transparent 4px 20px);
+    animation: girar 3.2s linear infinite;
+  }
+
+  .globo.sorteando .globo-textura {
+    animation-duration: 0.35s;
+  }
+
+  .bola-saida {
+    position: absolute;
+    left: 50%;
+    bottom: -40px;
+    transform: translateX(-50%) scale(0.6);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--creme);
+    color: var(--roxo-escuro);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: bottom 0.45s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.2s ease, transform 0.45s ease;
+  }
+
+  .bola-saida.ativa {
+    bottom: 112%;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  @keyframes girar {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .status {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: #D9C4E0;
+    min-height: 16px;
+    text-align: center;
+  }
+
+  .sugestao {
+    margin-top: 4px;
+    background: rgba(199, 154, 62, 0.12);
+    border: 1px solid var(--acento);
+    border-radius: 4px;
+    padding: 14px 16px;
+  }
+
+  .sugestao .jogo-rotulo {
+    color: var(--acento);
+  }
+
+  .sugestao-nota {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #D9C4E0;
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  footer {
+    margin-top: 28px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    color: #B79AC0;
+    line-height: 1.6;
+  }
+
+  footer a { color: var(--acento); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="tituloJogo">Sorteio de números<br>para a Lotofácil</h1>
+    <p id="descricaoJogo">Sorteio uniforme entre 1 e 25, sem repetição dentro do jogo — mesma lógica estatística do globo físico.</p>
+  </header>
+
+  <div class="loterias">
+    <button type="button" class="loteria-botao ativo" data-loteria="lotofacil">Lotofácil</button>
+    <button type="button" class="loteria-botao" data-loteria="megasena">Mega-Sena</button>
+  </div>
+
+  <div class="painel">
+    <div class="campo">
+      <span>Jogos a gerar</span>
+      <div class="stepper">
+        <button type="button" data-alvo="jogos" data-delta="-1">−</button>
+        <span id="valorJogos">4</span>
+        <button type="button" data-alvo="jogos" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="campo">
+      <span>Números por jogo</span>
+      <div class="stepper">
+        <button type="button" data-alvo="numeros" data-delta="-1">−</button>
+        <span id="valorNumeros">15</span>
+        <button type="button" data-alvo="numeros" data-delta="1">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="botoes">
+    <button id="gerar" type="button">Gerar jogos</button>
+    <button id="limpar" type="button">Limpar</button>
+  </div>
+
+  <div class="globo-area" style="margin-top: 24px;">
+    <div class="globo" id="globo">
+      <div class="globo-textura"></div>
+      <div class="bola-saida" id="bolaSaida"></div>
+    </div>
+    <div class="status" id="status">Toque em "Gerar jogos" para começar o sorteio</div>
+  </div>
+
+  <div id="resultados"></div>
+
+  <footer>
+    Gerador independente para fins de estudo e diversão. Não tem vínculo com a Caixa Econômica Federal e não altera as chances reais de nenhum concurso.
+  </footer>
+</main>
+
+<script>
+  const perfis = {
+    lotofacil: {
+      nome: 'Lotofácil',
+      universo: 25,
+      minNumeros: 15,
+      maxNumeros: 20,
+      padrao: 15,
+      titulo: 'Sorteio de números<br>para a Lotofácil',
+      descricao: 'Sorteio uniforme entre 1 e 25, sem repetição dentro do jogo — mesma lógica estatística do globo físico.',
+    },
+    megasena: {
+      nome: 'Mega-Sena',
+      universo: 60,
+      minNumeros: 6,
+      maxNumeros: 15,
+      padrao: 6,
+      titulo: 'Sorteio de números<br>para a Mega-Sena',
+      descricao: 'Sorteio uniforme entre 1 e 60, sem repetição dentro do jogo — mesma lógica estatística do globo físico.',
+    },
+  };
+
+  let loteriaAtual = 'lotofacil';
+  let qtdJogos = 4;
+  let qtdNumeros = perfis[loteriaAtual].padrao;
+
+  const valorJogosEl = document.getElementById('valorJogos');
+  const valorNumerosEl = document.getElementById('valorNumeros');
+  const resultadosEl = document.getElementById('resultados');
+  const tituloJogoEl = document.getElementById('tituloJogo');
+  const descricaoJogoEl = document.getElementById('descricaoJogo');
+
+  function aplicarLoteria(id) {
+    loteriaAtual = id;
+    const perfil = perfis[id];
+
+    document.querySelectorAll('.loteria-botao').forEach(b => {
+      b.classList.toggle('ativo', b.dataset.loteria === id);
+    });
+    document.body.classList.toggle('tema-megasena', id === 'megasena');
+
+    tituloJogoEl.innerHTML = perfil.titulo;
+    descricaoJogoEl.textContent = perfil.descricao;
+
+    qtdNumeros = perfil.padrao;
+    valorNumerosEl.textContent = qtdNumeros;
+
+    resultadosEl.innerHTML = '';
+    statusEl.textContent = 'Toque em "Gerar jogos" para começar o sorteio';
+  }
+
+  document.querySelectorAll('.loteria-botao').forEach(btn => {
+    btn.addEventListener('click', () => aplicarLoteria(btn.dataset.loteria));
+  });
+
+  document.querySelectorAll('.stepper button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const alvo = btn.dataset.alvo;
+      const delta = parseInt(btn.dataset.delta, 10);
+      const perfil = perfis[loteriaAtual];
+
+      if (alvo === 'jogos') {
+        qtdJogos = Math.min(12, Math.max(1, qtdJogos + delta));
+        valorJogosEl.textContent = qtdJogos;
+      } else {
+        qtdNumeros = Math.min(perfil.maxNumeros, Math.max(perfil.minNumeros, qtdNumeros + delta));
+        valorNumerosEl.textContent = qtdNumeros;
+      }
+    });
+  });
+
+  const globoEl = document.getElementById('globo');
+  const bolaSaidaEl = document.getElementById('bolaSaida');
+  const statusEl = document.getElementById('status');
+  const botaoGerar = document.getElementById('gerar');
+
+  function esperar(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function sortearNumero(disponiveis) {
+    const buffer = new Uint32Array(1);
+    crypto.getRandomValues(buffer);
+    const indice = buffer[0] % disponiveis.length;
+    const numero = disponiveis[indice];
+    disponiveis.splice(indice, 1);
+    return numero;
+  }
+
+  async function sortearComAnimacao() {
+    botaoGerar.disabled = true;
+    botaoGerar.textContent = 'Sorteando...';
+    resultadosEl.innerHTML = '';
+    const jogosGerados = [];
+    const perfil = perfis[loteriaAtual];
+
+    for (let j = 0; j < qtdJogos; j++) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'jogo';
+
+      const rotulo = document.createElement('div');
+      rotulo.className = 'jogo-rotulo';
+      rotulo.textContent = `Jogo ${j + 1}`;
+
+      const bolas = document.createElement('div');
+      bolas.className = 'bolas';
+
+      wrapper.appendChild(rotulo);
+      wrapper.appendChild(bolas);
+      resultadosEl.appendChild(wrapper);
+
+      const disponiveis = Array.from({ length: perfil.universo }, (_, i) => i + 1);
+      const sorteados = [];
+
+      for (let i = 0; i < qtdNumeros; i++) {
+        statusEl.textContent = `Jogo ${j + 1} — sorteando bola ${i + 1} de ${qtdNumeros}`;
+        globoEl.classList.add('sorteando');
+        await esperar(420);
+        globoEl.classList.remove('sorteando');
+
+        const numero = sortearNumero(disponiveis);
+        sorteados.push(numero);
+
+        bolaSaidaEl.textContent = String(numero).padStart(2, '0');
+        bolaSaidaEl.classList.add('ativa');
+        await esperar(450);
+        bolaSaidaEl.classList.remove('ativa');
+
+        const bola = document.createElement('div');
+        bola.className = 'bola';
+        bola.textContent = String(numero).padStart(2, '0');
+        bolas.appendChild(bola);
+
+        await esperar(80);
+      }
+
+      // Reordena as bolas do jogo em ordem crescente após o sorteio
+      sorteados.sort((a, b) => a - b);
+      bolas.innerHTML = '';
+      sorteados.forEach(numero => {
+        const bola = document.createElement('div');
+        bola.className = 'bola';
+        bola.textContent = String(numero).padStart(2, '0');
+        bolas.appendChild(bola);
+      });
+
+      jogosGerados.push(sorteados);
+    }
+
+    if (jogosGerados.length > 1) {
+      exibirSugestao(jogosGerados, qtdNumeros, perfil.universo);
+    }
+
+    statusEl.textContent = 'Sorteio concluído';
+    botaoGerar.disabled = false;
+    botaoGerar.textContent = 'Gerar jogos';
+  }
+
+  botaoGerar.addEventListener('click', sortearComAnimacao);
+
+  document.getElementById('limpar').addEventListener('click', () => {
+    resultadosEl.innerHTML = '';
+    statusEl.textContent = 'Toque em "Gerar jogos" para começar o sorteio';
+  });
+
+  function ehPrimo(n) {
+    if (n < 2) return false;
+    for (let i = 2; i * i <= n; i++) {
+      if (n % i === 0) return false;
+    }
+    return true;
+  }
+
+  function classificarNumero(n, universo) {
+    const meio = Math.floor(universo / 2);
+    return {
+      par: n % 2 === 0,
+      primoFraco: ehPrimo(n) && n <= meio,
+      primoForte: ehPrimo(n) && n > meio,
+    };
+  }
+
+  function montarSugestao(jogosGerados, qtdNumeros, universo) {
+    // Frequência de cada número entre os jogos já sorteados nesta rodada
+    const frequencia = new Array(universo + 1).fill(0);
+    jogosGerados.forEach(jogo => jogo.forEach(n => frequencia[n]++));
+
+    // Metas de equilíbrio proporcionais ao universo de números da loteria ativa
+    const meio = Math.floor(universo / 2);
+    const paresUniverso = Math.floor(universo / 2);
+    const primosFracosUniverso = [];
+    const primosFortesUniverso = [];
+    for (let n = 2; n <= universo; n++) {
+      if (ehPrimo(n)) (n <= meio ? primosFracosUniverso : primosFortesUniverso).push(n);
+    }
+
+    const alvoPares = Math.round((qtdNumeros * paresUniverso) / universo);
+    const alvoImpares = qtdNumeros - alvoPares;
+    const alvoPrimosFracos = Math.round((qtdNumeros * primosFracosUniverso.length) / universo);
+    const alvoPrimosFortes = Math.round((qtdNumeros * primosFortesUniverso.length) / universo);
+
+    // Ordena os números do universo por frequência (desempate aleatório)
+    const candidatos = Array.from({ length: universo }, (_, i) => i + 1)
+      .map(n => ({ n, freq: frequencia[n], sorte: Math.random() }))
+      .sort((a, b) => b.freq - a.freq || a.sorte - b.sorte)
+      .map(c => c.n);
+
+    const selecionados = [];
+    const contagem = { pares: 0, impares: 0, primosFracos: 0, primosFortes: 0 };
+
+    function cabe(n) {
+      const { par, primoFraco, primoForte } = classificarNumero(n, universo);
+      if (par && contagem.pares >= alvoPares) return false;
+      if (!par && contagem.impares >= alvoImpares) return false;
+      if (primoFraco && contagem.primosFracos >= alvoPrimosFracos) return false;
+      if (primoForte && contagem.primosFortes >= alvoPrimosFortes) return false;
+      return true;
+    }
+
+    function adicionar(n) {
+      const { par, primoFraco, primoForte } = classificarNumero(n, universo);
+      par ? contagem.pares++ : contagem.impares++;
+      if (primoFraco) contagem.primosFracos++;
+      if (primoForte) contagem.primosFortes++;
+      selecionados.push(n);
+    }
+
+    // 1ª passada: respeita todos os critérios de equilíbrio
+    candidatos.forEach(n => {
+      if (selecionados.length < qtdNumeros && !selecionados.includes(n) && cabe(n)) {
+        adicionar(n);
+      }
+    });
+
+    // 2ª passada: completa por frequência, relaxando os critérios se necessário
+    candidatos.forEach(n => {
+      if (selecionados.length < qtdNumeros && !selecionados.includes(n)) {
+        adicionar(n);
+      }
+    });
+
+    return selecionados.sort((a, b) => a - b);
+  }
+
+  function exibirSugestao(jogosGerados, qtdNumeros, universo) {
+    const sugestao = montarSugestao(jogosGerados, qtdNumeros, universo);
+    const meio = Math.floor(universo / 2);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'jogo sugestao';
+
+    const rotulo = document.createElement('div');
+    rotulo.className = 'jogo-rotulo';
+    rotulo.textContent = `Palpite sugerido (equilíbrio par/ímpar e primos)`;
+
+    const bolas = document.createElement('div');
+    bolas.className = 'bolas';
+    sugestao.forEach(numero => {
+      const bola = document.createElement('div');
+      bola.className = 'bola';
+      bola.textContent = String(numero).padStart(2, '0');
+      bolas.appendChild(bola);
+    });
+
+    const nota = document.createElement('div');
+    nota.className = 'sugestao-nota';
+    nota.textContent = `Combina os números mais frequentes entre os jogos sorteados acima, equilibrando pares/ímpares e primos fracos (≤${meio}) e fortes (>${meio}). Não representa maior chance real de acerto.`;
+
+    wrapper.appendChild(rotulo);
+    wrapper.appendChild(bolas);
+    wrapper.appendChild(nota);
+    resultadosEl.appendChild(wrapper);
+  }
+</script>
+</body>
+</html>
