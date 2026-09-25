@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Palpites — Lotofácil</title>
+<style>
+  :root{
+    --bg: #F5F2FA;
+    --paper: #FFFFFF;
+    --plum: #3B1F5C;
+    --plum-ink: #241536;
+    --muted: #6E5F87;
+    --gold: #C98A2B;
+    --gold-soft: #F1DDB4;
+    --teal: #1F7A6C;
+    --teal-soft: #CDE8E2;
+    --line: #DCD3EA;
+    --danger: #A23B3B;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--plum-ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 32px 16px 64px;
+  }
+  .wrap{ max-width: 620px; margin: 0 auto; }
+
+  header{ text-align:center; margin-bottom: 28px; }
+  header h1{
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 1.9rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin: 0 0 6px;
+    color: var(--plum);
+  }
+  header p{
+    margin:0; color: var(--muted); font-size: 0.95rem; line-height: 1.5;
+    max-width: 440px; margin: 0 auto;
+  }
+
+  .tabs{
+    display:flex; gap:8px; margin: 24px 0 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tab{
+    flex:1; padding: 10px 6px; text-align:center; cursor:pointer;
+    font-size: 0.9rem; color: var(--muted); border-bottom: 2px solid transparent;
+    background:none; border-top:none; border-left:none; border-right:none;
+    font-family: inherit;
+  }
+  .tab.active{ color: var(--plum); border-bottom-color: var(--plum); font-weight:600; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 20px;
+    margin-bottom: 18px;
+  }
+  .card h2{
+    font-size: 0.95rem; margin: 0 0 14px;
+    color: var(--plum);
+    font-weight: 600;
+  }
+  .card h2 .step{ color: var(--gold); margin-right: 6px; }
+
+  .ball-grid{
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .ball{
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--paper);
+    color: var(--plum-ink);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    font-family: "Trebuchet MS", Verdana, sans-serif;
+  }
+  .ball.hot::after{
+    content: '';
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+  }
+  .ball.on.hot::after{ background: #fff; }
+  .ball:hover{ border-color: var(--plum); }
+  .ball.on{
+    background: var(--plum);
+    border-color: var(--plum);
+    color: #fff;
+  }
+  .ball:active{ transform: scale(0.94); }
+  .ball[disabled]{ opacity: 0.35; cursor: not-allowed; }
+
+  .count-line{
+    margin-top: 12px; font-size: 0.85rem; color: var(--muted);
+  }
+  .count-line strong{ color: var(--plum-ink); }
+  .warn{ color: var(--danger); }
+
+  .legend-hot{
+    display:flex; align-items:center; gap:6px;
+    font-size: 0.78rem; color: var(--muted); margin-top: 10px;
+  }
+  .legend-hot .dot-static{
+    width:6px; height:6px; border-radius:50%; background: var(--gold); display:inline-block;
+  }
+
+  .busca-status{
+    font-size: 0.82rem; margin: 0 0 12px; min-height: 1.1em; line-height: 1.5;
+  }
+  .busca-status.loading{ color: var(--muted); }
+  .busca-status.success{ color: var(--teal); }
+  .busca-status.error{ color: var(--danger); }
+
+  .slider-row{ display:flex; align-items:center; gap: 14px; }
+  .slider-row input[type=range]{ flex:1; accent-color: var(--plum); }
+  .slider-val{
+    min-width: 34px; text-align:center; font-weight:700; color: var(--plum);
+    font-family: "Trebuchet MS", Verdana, sans-serif;
+  }
+  .slider-note{ margin-top: 10px; font-size: 0.82rem; color: var(--muted); line-height:1.5; }
+
+  .field-row{ display:flex; gap: 14px; }
+  .field{ flex:1; }
+  .field label{ display:block; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+  .field input{
+    width:100%; padding: 9px 10px; border-radius: 6px;
+    border: 1.5px solid var(--line); font-size: 0.95rem;
+    font-family: inherit; color: var(--plum-ink);
+  }
+  .field input:focus{ outline: none; border-color: var(--plum); }
+
+  .btn{
+    width:100%; padding: 13px; border-radius: 8px; border: none;
+    background: var(--plum); color: #fff; font-size: 0.98rem; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.2px;
+    font-family: inherit;
+  }
+  .btn:hover{ background: #4C2A76; }
+  .btn:active{ transform: scale(0.99); }
+
+  .btn-row{ display:flex; gap: 10px; }
+  .btn-row .btn{ flex: 2; }
+  .btn-ghost{
+    flex: 1;
+    padding: 13px; border-radius: 8px;
+    border: 1.5px solid var(--line);
+    background: transparent; color: var(--muted);
+    font-size: 0.98rem; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-ghost:hover{ border-color: var(--plum); color: var(--plum); }
+
+  .ticket{
+    background: var(--paper);
+    border: 1.5px dashed var(--muted);
+    border-radius: 10px;
+    padding: 22px 20px;
+    margin-top: 18px;
+    display:none;
+  }
+  .ticket.show{ display:block; }
+  .ticket-title{
+    font-size: 0.78rem; letter-spacing: 0.4px; color: var(--muted);
+    margin: 0 0 14px; text-transform: none;
+  }
+  .ticket-balls{
+    display:flex; flex-wrap:wrap; gap: 8px; margin-bottom: 16px;
+  }
+  .ticket-ball{
+    width: 40px; height: 40px; border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size: 0.95rem; color: #fff;
+    font-family: "Trebuchet MS", Verdana, sans-serif;
+  }
+  .ticket-ball.repeated{ background: var(--gold); }
+  .ticket-ball.new{ background: var(--teal); }
+
+  .legend{ display:flex; gap: 18px; font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; }
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .dot.gold{ background: var(--gold); }
+  .dot.teal{ background: var(--teal); }
+
+  .stats{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    border-top: 1px solid var(--line); padding-top: 14px;
+  }
+  .stat{ text-align:center; }
+  .stat b{ display:block; font-size: 1.15rem; color: var(--plum); font-family: "Trebuchet MS", Verdana, sans-serif; }
+  .stat span{ font-size: 0.72rem; color: var(--muted); }
+
+  .games-out{ margin-top: 18px; }
+  .game-row{
+    display:flex; flex-wrap:wrap; gap: 6px; align-items:center;
+    background: var(--paper); border:1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 8px; font-size: 0.85rem;
+  }
+  .game-row .idx{ color: var(--muted); min-width: 22px; }
+  .game-ball{
+    width: 30px; height: 30px; border-radius: 50%; background: var(--plum);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    font-size: 0.78rem; font-weight:700; font-family: "Trebuchet MS", Verdana, sans-serif;
+  }
+
+  footer{
+    text-align:center; margin-top: 26px; font-size: 0.75rem; color: var(--muted);
+    line-height: 1.6;
+  }
+  footer a{ color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Gerador de Palpites</h1>
+    <p>Lotofácil — combine o sorteio anterior com a frequência histórica oficial, ou gere jogos totalmente aleatórios.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="anterior">Baseado no sorteio anterior</button>
+    <button class="tab" data-tab="aleatorio">Sorteio aleatório</button>
+  </div>
+
+  <!-- ================= MODO: BASEADO NO SORTEIO ANTERIOR ================= -->
+  <div class="panel active" id="panel-anterior">
+
+    <div class="card">
+      <h2><span class="step">1.</span>Marque as dezenas do concurso anterior</h2>
+      <button class="btn-ghost" id="btnBuscarAuto" style="width:100%; margin-bottom:12px;">🔍 Buscar resultado automaticamente</button>
+      <p class="busca-status" id="statusBusca"></p>
+      <div class="ball-grid" id="grid-anterior"></div>
+      <p class="count-line">Selecionadas: <strong id="count-anterior">0</strong> de 25 <span id="warn-anterior" class="warn"></span></p>
+      <p class="legend-hot"><span class="dot-static"></span> dezena entre as 10 mais sorteadas historicamente</p>
+      <button class="btn-ghost" id="btnLimparAnterior" style="width:100%; margin-top:12px;">Limpar seleção</button>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">2.</span>Quantas dezenas repetir do sorteio anterior?</h2>
+      <div class="slider-row">
+        <input type="range" id="repeatSlider" min="5" max="15" value="9">
+        <span class="slider-val" id="repeatVal">9</span>
+      </div>
+      <p class="slider-note">
+        Matematicamente, pelo menos 5 dezenas do concurso anterior sempre se repetem no próximo (15 sorteadas de 25, restando só 10 de fora). A média histórica fica perto de 9. Esse ajuste não muda a chance real do jogo — só reflete o padrão estatístico típico.
+      </p>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="btnGerarAnterior">Gerar palpite</button>
+      <button class="btn-ghost" id="btnLimparResultadoAnterior">Limpar palpite</button>
+    </div>
+
+    <div class="ticket" id="ticketAnterior">
+      <p class="ticket-title">Seu palpite sugerido</p>
+      <div class="legend">
+        <span><i class="dot gold"></i>repetida do sorteio anterior</span>
+        <span><i class="dot teal"></i>nova (fora do sorteio anterior)</span>
+      </div>
+      <div class="ticket-balls" id="ticketBallsAnterior"></div>
+      <div class="stats" id="statsAnterior"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODO: ALEATÓRIO ================= -->
+  <div class="panel" id="panel-aleatorio">
+    <div class="card">
+      <h2>Configurações do sorteio</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="numJogos">Quantidade de jogos</label>
+          <input type="number" id="numJogos" min="1" max="50" value="1">
+        </div>
+        <div class="field">
+          <label for="numDezenas">Dezenas por jogo</label>
+          <input type="number" id="numDezenas" min="15" max="20" value="15">
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="btnGerarAleatorio">Gerar</button>
+      <button class="btn-ghost" id="btnLimparAleatorio">Limpar</button>
+    </div>
+    <div class="games-out" id="gamesOut"></div>
+  </div>
+
+  <footer>
+    Ranking de frequência histórica estimado a partir de estatísticas oficiais dos concursos da Caixa (consultado em 21/09/2026).<br>
+    Toda combinação de dezenas tem a mesma probabilidade matemática de ser sorteada — as ferramentas acima organizam o palpite, mas não alteram a chance real de acerto.
+  </footer>
+
+</div>
+
+<script>
+// Ranking de frequência histórica (posição 1 = dezena mais sorteada historicamente até a mais rara),
+// consolidado a partir de estatísticas oficiais dos concursos da Lotofácil.
+const FREQ_RANK = [20,10,25,11,13,24,1,14,4,3,5,12,2,22,9,15,19,18,21,7,6,17,23,8,16];
+const FREQ_WEIGHT = {};
+FREQ_RANK.forEach((num, i) => { FREQ_WEIGHT[num] = FREQ_RANK.length - i; });
+
+const PRIMES = new Set([2,3,5,7,11,13,17,19,23]);
+
+// ---------- MODO: BASEADO NO SORTEIO ANTERIOR ----------
+const gridAnterior = document.getElementById('grid-anterior');
+const selected = new Set();
+
+for (let n = 1; n <= 25; n++) {
+  const btn = document.createElement('button');
+  btn.className = 'ball';
+  if (FREQ_RANK.indexOf(n) !== -1 && FREQ_RANK.indexOf(n) < 10) btn.classList.add('hot');
+  btn.type = 'button';
+  btn.textContent = String(n).padStart(2, '0');
+  btn.addEventListener('click', () => {
+    if (selected.has(n)) {
+      selected.delete(n);
+      btn.classList.remove('on');
+    } else {
+      if (selected.size >= 20) return;
+      selected.add(n);
+      btn.classList.add('on');
+    }
+    updateCountAnterior();
+  });
+  gridAnterior.appendChild(btn);
+}
+
+function updateCountAnterior() {
+  const countEl = document.getElementById('count-anterior');
+  const warnEl = document.getElementById('warn-anterior');
+  countEl.textContent = selected.size;
+  warnEl.textContent = (selected.size === 15) ? '' : ' (o ideal é marcar as 15 dezenas oficiais do concurso)';
+
+  const slider = document.getElementById('repeatSlider');
+  const maxRepeat = Math.min(15, selected.size || 15);
+  slider.max = maxRepeat;
+  if (parseInt(slider.value, 10) > maxRepeat) slider.value = maxRepeat;
+  document.getElementById('repeatVal').textContent = slider.value;
+}
+
+const repeatSlider = document.getElementById('repeatSlider');
+repeatSlider.addEventListener('input', () => {
+  document.getElementById('repeatVal').textContent = repeatSlider.value;
+});
+
+document.getElementById('btnLimparAnterior').addEventListener('click', () => {
+  selected.clear();
+  gridAnterior.querySelectorAll('.ball').forEach(b => b.classList.remove('on'));
+  updateCountAnterior();
+  document.getElementById('ticketAnterior').classList.remove('show');
+  document.getElementById('statusBusca').textContent = '';
+  document.getElementById('statusBusca').className = 'busca-status';
+});
+
+// ---------- BUSCA AUTOMÁTICA DO ÚLTIMO CONCURSO ----------
+function parseRespostaGuidi(data) {
+  const bruto = data.listaDezenas || data.dezenas || data.dezenasSorteadas || [];
+  const dezenas = bruto.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 25);
+  return { concurso: data.concurso || data.numero || null, data: data.data || data.dataApuracao || null, dezenas };
+}
+
+function parseRespostaHeroku(data) {
+  const bruto = data.dezenas || [];
+  const dezenas = bruto.map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= 25);
+  return { concurso: data.concurso || null, data: data.data || null, dezenas };
+}
+
+const FONTES_DIRETAS = [
+  { url: 'https://api.guidi.dev.br/loteria/lotofacil/ultimo', parser: parseRespostaGuidi },
+  { url: 'https://loteriascaixa-api.herokuapp.com/api/lotofacil/latest', parser: parseRespostaHeroku }
+];
+
+// Fallback extra: as mesmas fontes, passando por um proxy CORS público —
+// resolve os casos em que a API não libera acesso direto do navegador.
+const FONTES_RESULTADO = [
+  ...FONTES_DIRETAS,
+  ...FONTES_DIRETAS.map(f => ({
+    url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(f.url),
+    parser: f.parser
+  }))
+];
+
+document.getElementById('btnBuscarAuto').addEventListener('click', async () => {
+  const statusEl = document.getElementById('statusBusca');
+  statusEl.textContent = 'Buscando o último resultado (pode levar alguns segundos)...';
+  statusEl.className = 'busca-status loading';
+
+  for (const fonte of FONTES_RESULTADO) {
+    try {
+      const res = await fetch(fonte.url);
+      if (!res.ok) continue;
+      const json = await res.json();
+      const parsed = fonte.parser(json);
+      if (parsed.dezenas.length >= 15) {
+        selected.clear();
+        gridAnterior.querySelectorAll('.ball').forEach(b => b.classList.remove('on'));
+        parsed.dezenas.forEach(n => {
+          selected.add(n);
+          gridAnterior.children[n - 1].classList.add('on');
+        });
+        updateCountAnterior();
+        const rotulo = parsed.concurso ? `Concurso nº ${parsed.concurso}` : 'Último concurso';
+        const dataTxt = parsed.data ? ` (${parsed.data})` : '';
+        statusEl.textContent = `${rotulo}${dataTxt} carregado automaticamente. Dezenas com ● são as historicamente mais fortes.`;
+        statusEl.className = 'busca-status success';
+        return;
+      }
+    } catch (e) {
+      // tenta a próxima fonte
+    }
+  }
+
+  statusEl.textContent = 'Não foi possível buscar automaticamente agora (a fonte pode estar fora do ar ou bloqueando o acesso). Marque as dezenas manualmente abaixo.';
+  statusEl.className = 'busca-status error';
+});
+
+document.getElementById('btnLimparResultadoAnterior').addEventListener('click', () => {
+  document.getElementById('ticketAnterior').classList.remove('show');
+});
+
+document.getElementById('btnGerarAnterior').addEventListener('click', () => {
+  if (selected.size < 5) {
+    alert('Marque pelo menos as 15 dezenas do concurso anterior para gerar um palpite coerente.');
+    return;
+  }
+
+  const drawn = [...selected];
+  const nonDrawn = [];
+  for (let n = 1; n <= 25; n++) if (!selected.has(n)) nonDrawn.push(n);
+
+  const repeatCount = Math.min(parseInt(repeatSlider.value, 10), drawn.length);
+  const newCount = Math.min(15 - repeatCount, nonDrawn.length);
+
+  const repeatedPick = [...drawn]
+    .sort((a, b) => FREQ_WEIGHT[b] - FREQ_WEIGHT[a])
+    .slice(0, repeatCount);
+
+  const newPick = [...nonDrawn]
+    .sort((a, b) => FREQ_WEIGHT[b] - FREQ_WEIGHT[a])
+    .slice(0, newCount);
+
+  const repeatedSet = new Set(repeatedPick);
+  const final = [...repeatedPick, ...newPick].sort((a, b) => a - b);
+
+  renderTicket(final, repeatedSet);
+});
+
+function renderTicket(numbers, repeatedSet) {
+  const ticket = document.getElementById('ticketAnterior');
+  const ballsEl = document.getElementById('ticketBallsAnterior');
+  const statsEl = document.getElementById('statsAnterior');
+
+  ballsEl.innerHTML = '';
+  numbers.forEach(n => {
+    const ball = document.createElement('div');
+    ball.className = 'ticket-ball ' + (repeatedSet.has(n) ? 'repeated' : 'new');
+    ball.textContent = String(n).padStart(2, '0');
+    ballsEl.appendChild(ball);
+  });
+
+  const odd = numbers.filter(n => n % 2 !== 0).length;
+  const even = numbers.length - odd;
+  const primes = numbers.filter(n => PRIMES.has(n)).length;
+  const sum = numbers.reduce((a, b) => a + b, 0);
+
+  statsEl.innerHTML = `
+    <div class="stat"><b>${odd} / ${even}</b><span>ímpares / pares</span></div>
+    <div class="stat"><b>${primes}</b><span>números primos</span></div>
+    <div class="stat"><b>${sum}</b><span>soma total</span></div>
+  `;
+
+  ticket.classList.add('show');
+}
+
+// ---------- MODO: ALEATÓRIO ----------
+document.getElementById('btnLimparAleatorio').addEventListener('click', () => {
+  document.getElementById('gamesOut').innerHTML = '';
+});
+
+document.getElementById('btnGerarAleatorio').addEventListener('click', () => {
+  const numJogos = Math.max(1, Math.min(50, parseInt(document.getElementById('numJogos').value, 10) || 1));
+  const numDezenas = Math.max(15, Math.min(20, parseInt(document.getElementById('numDezenas').value, 10) || 15));
+
+  const out = document.getElementById('gamesOut');
+  out.innerHTML = '';
+
+  for (let i = 1; i <= numJogos; i++) {
+    const pool = Array.from({ length: 25 }, (_, idx) => idx + 1);
+    for (let j = pool.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [pool[j], pool[k]] = [pool[k], pool[j]];
+    }
+    const game = pool.slice(0, numDezenas).sort((a, b) => a - b);
+
+    const row = document.createElement('div');
+    row.className = 'game-row';
+    row.innerHTML = `<span class="idx">${i}.</span>` +
+      game.map(n => `<span class="game-ball">${String(n).padStart(2, '0')}</span>`).join('');
+    out.appendChild(row);
+  }
+});
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
